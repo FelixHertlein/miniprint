@@ -3,7 +3,15 @@ from PyPDF2 import PdfFileReader, PdfFileWriter
 from PyPDF2._page import PageObject
 from pathlib import Path
 from tqdm import tqdm
+import math
 
+A4_WIDTH, A4_HEIGHT = 595.28, 841.89
+A5_WIDTH, A5_HEIGHT = 419.528, 595.276
+
+PAGE_SCALE_MAP = {
+  (A4_WIDTH, A4_HEIGHT): 0.25,
+  (A5_WIDTH, A5_HEIGHT): 0.25*math.sqrt(2)
+}
 
 def minify(input_file: str, output_file: str):
     input_file = Path(input_file)
@@ -21,11 +29,11 @@ def minify(input_file: str, output_file: str):
         stack_pages = math.ceil(reader.numPages / 32) * 2
 
         writer = PdfFileWriter()
-        scale = 0.25
+        page_scale = PAGE_SCALE_MAP[tuple(sorted([height, width]))]
 
         for page_number in tqdm(range(stack_pages), "Minfying page"):
 
-            new_page = PageObject.createBlankPage(None, width, height)
+            new_page = PageObject.createBlankPage(None, A4_WIDTH, A4_HEIGHT)
 
             for inpage_pos in range(16):
                 inpage_row = inpage_pos // 4
@@ -40,10 +48,10 @@ def minify(input_file: str, output_file: str):
                     if index < reader.numPages
                     else PageObject.createBlankPage(None, width, height)
                 )
-                tx = inpage_col * width * scale
-                ty = reverse_row(inpage_row) * height * scale
+                tx = inpage_col * A4_WIDTH * 0.25
+                ty = reverse_row(inpage_row) * A4_HEIGHT * 0.25
 
-                new_page.mergeScaledTranslatedPage(old_page, scale=scale, tx=tx, ty=ty)
+                new_page.mergeScaledTranslatedPage(old_page, scale=page_scale, tx=tx, ty=ty)
 
             writer.addPage(new_page)
 
